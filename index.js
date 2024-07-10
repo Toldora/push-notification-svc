@@ -8,11 +8,7 @@ const PORT = process.env.PORT || 3030;
 
 const app = express();
 
-app.use(
-  cors({
-    origin: false,
-  }),
-);
+app.use(cors());
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 app.use('/subscriptions', subscriptionsRoutes);
