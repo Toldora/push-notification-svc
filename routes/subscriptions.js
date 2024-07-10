@@ -3,7 +3,7 @@ const { Router } = require('express');
 const webpush = require('web-push');
 const { check, validationResult } = require('express-validator');
 const User = require('../models/User');
-const Casino = require('../models/Casino');
+const Subscription = require('../models/Subscription');
 require('dotenv').config();
 
 const router = Router();
@@ -15,28 +15,52 @@ const vapidKeys = {
   privateKey: process.env.FCM_VAPID_PRIVATE_KEY,
 };
 
+// webpush.setGCMAPIKey(process.env.GCM_SENDER_ID);
 webpush.setVapidDetails(
   'https://mayan.bet/',
   vapidKeys.publicKey,
   vapidKeys.privateKey,
 );
 
-const sendNotification = (subscription, dataToSend = '') => {
-  webpush.sendNotification(subscription, dataToSend);
+const sendNotification = async (subscription, dataToSend = '') => {
+  await webpush.sendNotification(subscription, dataToSend);
+  return `${dataToSend} SENT`;
 };
-
-let subscriptionDB = null;
 
 router.get('/', async (req, res) => {
   res.json({ message: 'Hi!' });
 });
 
-router.get('/send-notification', (req, res) => {
-  const subscription = subscriptionDB; //get subscription from your database here.
-  const message = 'Hello World';
-  // const message = JSON.stringify({ title: 'title', body: 'body' });
-  sendNotification(subscription, message);
-  res.json({ message: 'message sent' });
+router.post('/send-notification', async (req, res) => {
+  try {
+    const { clickIds = [], message } = req.body;
+
+    if (!clickIds?.length) {
+      return res.status(400).json({ message: 'clickIds array is empty' });
+    }
+
+    const pushPromises = clickIds.map(async clickId => {
+      const user = await User.findOne({ clickId })?.populate('subscription');
+
+      if (!user) {
+        return res
+          .status(400)
+          .json({ message: `User with clickId=${clickId} not found` });
+      }
+
+      const { subscription } = user;
+      console.log(subscription);
+
+      return sendNotification(subscription, message);
+    });
+
+    const results = await Promise.all(pushPromises);
+    console.log(results);
+
+    res.json({ message: 'messages sent' });
+  } catch (error) {
+    res.status(400).json({ error, message: 'Something went wrong' });
+  }
 });
 
 router.post('/save-subscription', async (req, res) => {
@@ -49,16 +73,16 @@ router.post('/save-subscription', async (req, res) => {
     //   });
     // }
 
-    const subscription = req.body;
-    console.log(subscription);
-    subscriptionDB = subscription;
+    const { subscription, clickId } = req.body;
 
-    // await saveToDatabase(subscription);
-    res.json({ message: 'success' });
+    const newSubscription = new Subscription(subscription);
+    await newSubscription.save();
+    const newUser = new User({ clickId, subscription: newSubscription._id });
+    await newUser.save();
 
-    // res.status(201).json(newUser);
+    res.status(201).json(newUser);
   } catch (error) {
-    res.status(500).json({ error, message: 'Something went wrong' });
+    res.status(400).json({ error, message: 'Something went wrong' });
   }
 });
 

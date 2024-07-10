@@ -42,5 +42,6 @@ module.exports = {
         allow: ['warn', 'error'],
       },
     ],
+    'consistent-return': 0,
   },
 };

@@ -16,7 +16,7 @@ app.use('/subscriptions', subscriptionsRoutes);
 async function init() {
   try {
     await mongoose.connect(
-      `mongodb+srv://${process.env.MONGODB_USER_NAME}:${process.env.MONGODB_USER_PASSWORD}@cluster0.f7lmvz0.mongodb.net`,
+      `mongodb+srv://${process.env.MONGODB_USER_NAME}:${process.env.MONGODB_USER_PASSWORD}@cluster0.f7lmvz0.mongodb.net/push-svc`,
       {
         useNewUrlParser: true,
       },

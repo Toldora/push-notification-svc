@@ -1,19 +1,12 @@
 const { Schema, model, ObjectId } = require('mongoose');
 
 const schema = new Schema({
-  email: {
-    type: String,
-    required: true,
-  },
-  browserId: {
+  clickId: {
     type: String,
   },
-  ip: {
-    type: String,
-  },
-  registeredOn: {
+  subscription: {
     type: ObjectId,
-    ref: 'Casino',
+    ref: 'Subscription',
     required: true,
   },
 });
