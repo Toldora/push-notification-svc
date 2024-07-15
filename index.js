@@ -2,6 +2,9 @@ const express = require('express');
 const mongoose = require('mongoose');
 const cors = require('cors');
 const subscriptionsRoutes = require('./routes/subscriptions');
+const notificationsRoutes = require('./routes/notifications');
+const { initWebpush } = require('./controllers/webpush');
+
 require('dotenv').config();
 
 const PORT = process.env.PORT || 3030;
@@ -11,7 +14,9 @@ const app = express();
 app.use(cors());
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
+
 app.use('/subscriptions', subscriptionsRoutes);
+app.use('/notifications', notificationsRoutes);
 
 async function init() {
   try {
@@ -21,8 +26,11 @@ async function init() {
         useNewUrlParser: true,
       },
     );
+
+    initWebpush();
+
     app.listen(PORT, () => {
-      console.log('Server has been started...');
+      console.log(`Server has been started on port: ${PORT}`);
     });
   } catch (e) {
     console.log(e);

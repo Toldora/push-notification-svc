@@ -43,5 +43,6 @@ module.exports = {
       },
     ],
     'consistent-return': 0,
+    'no-underscore-dangle': 0,
   },
 };

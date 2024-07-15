@@ -1,69 +1,20 @@
-/* eslint-disable no-underscore-dangle */
 const { Router } = require('express');
-const webpush = require('web-push');
 const { check, validationResult } = require('express-validator');
+const { createCustomerUser, updateCustomerUser } = require('../controllers');
 const User = require('../models/User');
 const Subscription = require('../models/Subscription');
+
 require('dotenv').config();
 
 const router = Router();
 
 const validationMiddleware = [check('email', 'Invalid email').isEmail()];
 
-const vapidKeys = {
-  publicKey: process.env.FCM_VAPID_PUBLIC_KEY,
-  privateKey: process.env.FCM_VAPID_PRIVATE_KEY,
-};
-
-// webpush.setGCMAPIKey(process.env.GCM_SENDER_ID);
-webpush.setVapidDetails(
-  'https://mayan.bet/',
-  vapidKeys.publicKey,
-  vapidKeys.privateKey,
-);
-
-const sendNotification = async (subscription, dataToSend = '') => {
-  await webpush.sendNotification(subscription, dataToSend);
-  return `${dataToSend} SENT`;
-};
-
 router.get('/', async (req, res) => {
   res.json({ message: 'Hi!' });
 });
 
-router.post('/send-notification', async (req, res) => {
-  try {
-    const { clickIds = [], message } = req.body;
-
-    if (!clickIds?.length) {
-      return res.status(400).json({ message: 'clickIds array is empty' });
-    }
-
-    const pushPromises = clickIds.map(async clickId => {
-      const user = await User.findOne({ clickId })?.populate('subscription');
-
-      if (!user) {
-        return res
-          .status(400)
-          .json({ message: `User with clickId=${clickId} not found` });
-      }
-
-      const { subscription } = user;
-      console.log(subscription);
-
-      return sendNotification(subscription, message);
-    });
-
-    const results = await Promise.all(pushPromises);
-    console.log(results);
-
-    res.json({ message: 'messages sent' });
-  } catch (error) {
-    res.status(400).json({ error, message: 'Something went wrong' });
-  }
-});
-
-router.post('/save-subscription', async (req, res) => {
+router.post('/save', async (req, res) => {
   try {
     // const errors = validationResult(req);
     // if (!errors.isEmpty()) {
@@ -77,8 +28,22 @@ router.post('/save-subscription', async (req, res) => {
 
     const newSubscription = new Subscription(subscription);
     await newSubscription.save();
+    const user = await User.findOne({ clickId });
+    if (user) {
+      console.log('Subscription for delete', user.subscription);
+      await Subscription.findByIdAndDelete(user.subscription);
+      user.subscription = newSubscription._id;
+      await user.save();
+      await updateCustomerUser(clickId, { is_subscribed_on_push: true });
+      console.log('Updated user', user);
+
+      return res.status(201).json(user);
+    }
     const newUser = new User({ clickId, subscription: newSubscription._id });
     await newUser.save();
+    await createCustomerUser(clickId);
+
+    console.log('New user', newUser);
 
     res.status(201).json(newUser);
   } catch (error) {

@@ -3,11 +3,14 @@ const { Schema, model, ObjectId } = require('mongoose');
 const schema = new Schema({
   clickId: {
     type: String,
+    unique: true,
   },
   subscription: {
     type: ObjectId,
     ref: 'Subscription',
-    required: true,
+    required() {
+      return this.subscription !== null;
+    },
   },
 });
 
