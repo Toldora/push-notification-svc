@@ -16,9 +16,7 @@ router.post('/send', async (req, res) => {
       const user = await User.findOne({ clickId })?.populate('subscription');
 
       if (!user) {
-        return res
-          .status(400)
-          .json({ message: `User with clickId=${clickId} not found` });
+        return new Error(`User with clickId=${clickId} not found`);
       }
 
       const { subscription } = user;
